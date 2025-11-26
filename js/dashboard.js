@@ -1,151 +1,161 @@
-// Dashboard Page Script
-let editModal
-const bootstrap = window.bootstrap // Declare the bootstrap variable
+// dashboard.js - Logic untuk dashboard user dengan CRUD functionality
+let editModal;
 
-document.addEventListener("DOMContentLoaded", () => {
-  editModal = new bootstrap.Modal(document.getElementById("editEventModal"))
-
-  displayMyEvents()
-  displayFavorites()
-  setupEventListeners()
-})
-
-function setupEventListeners() {
-  document.getElementById("editEventForm").addEventListener("submit", handleEditSubmit)
-}
-
-function displayMyEvents() {
-  const events = StorageManager.getAll() || []
-  const userEventIds = JSON.parse(localStorage.getItem("userEvents") || "[]")
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize Bootstrap modal
+  editModal = new bootstrap.Modal(document.getElementById('editEventModal'));
   
-  // Fixed: Use actual userEvents array instead of hardcoded filter
-  const userEvents = events.filter((event) => userEventIds.includes(event.id))
+  // Load initial data
+  loadMyEvents();
+  
+  // Setup edit form handler
+  document.getElementById('editEventForm').addEventListener('submit', handleEditSubmit);
+});
 
-  const container = document.getElementById("myEventsContainer")
-  const emptyMessage = document.getElementById("myEventsEmpty")
-
-  if (userEvents.length === 0) {
-    container.innerHTML = ""
-    emptyMessage.style.display = "block"
-    return
+function loadMyEvents() {
+  const container = document.getElementById('myEventsContainer');
+  const emptyMessage = document.getElementById('myEventsEmpty');
+  
+  // Get all events (in real app, filter by user)
+  const events = EventStorage.getAllEvents();
+  
+  if (events.length === 0) {
+    container.innerHTML = '';
+    emptyMessage.style.display = 'block';
+    return;
   }
-
-  emptyMessage.style.display = "none"
-  container.innerHTML = userEvents.map((event) => createDashboardCard(event, "user")).join("")
+  
+  emptyMessage.style.display = 'none';
+  container.innerHTML = events.map(event => createMyEventCard(event)).join('');
 }
 
-function displayFavorites() {
-  const events = StorageManager.getAll() || []
-  const favorites = StorageManager.getFavorites()
-  const favoriteEvents = events.filter((event) => favorites.includes(event.id))
-
-  const container = document.getElementById("favoritesContainer")
-  const emptyMessage = document.getElementById("favoritesEmpty")
-
-  if (favoriteEvents.length === 0) {
-    container.innerHTML = ""
-    emptyMessage.style.display = "block"
-    return
-  }
-
-  emptyMessage.style.display = "none"
-  container.innerHTML = favoriteEvents.map((event) => createDashboardCard(event, "favorite")).join("")
-}
-
-function createDashboardCard(event, type) {
-  const image = event.image || `/placeholder.svg?height=250&width=350&query=event`
-
-  let actionButtons = ""
-  if (type === "user") {
-    actionButtons = `
-            <button class="btn btn-sm btn-warning" onclick="openEditModal(${event.id})">
-                <i class="fas fa-edit me-1"></i>Edit
-            </button>
-            <button class="btn btn-sm btn-danger" onclick="deleteEvent(${event.id})">
-                <i class="fas fa-trash me-1"></i>Hapus
-            </button>
-        `
-  } else {
-    actionButtons = `
-            <a href="detail.html?id=${event.id}" class="btn btn-sm btn-primary">
-                <i class="fas fa-eye me-1"></i>Lihat
-            </a>
-            <button class="btn btn-sm btn-danger" onclick="removeFavorite(${event.id})">
-                <i class="fas fa-heart me-1"></i>Hapus
-            </button>
-        `
-  }
-
+function createMyEventCard(event) {
+  const formattedDate = formatDate(event.date);
+  const formattedPrice = formatPrice(event.price);
+  
   return `
-        <div class="col-md-6 col-lg-4">
-            <div class="card event-card shadow-sm h-100">
-                <img src="${image}" alt="${event.title}" class="card-img-top" onerror="this.src='/community-event.png'">
-                <div class="card-body event-card-body">
-                    <h5 class="card-title">${event.title}</h5>
-                    <p class="card-text small text-muted">
-                        <i class="fas fa-calendar me-2"></i>${formatDate(event.date)}<br>
-                        <i class="fas fa-map-marker-alt me-2"></i>${event.location}
-                    </p>
-                    <p class="card-text fw-bold text-primary">
-                        ${event.price === 0 ? "Gratis" : `Rp ${event.price.toLocaleString("id-ID")}`}
-                    </p>
-                </div>
-                <div class="card-footer bg-white border-top event-card-footer">
-                    ${actionButtons}
-                </div>
-            </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card event-card shadow-sm h-100">
+        <img src="${event.image}" class="card-img-top" alt="${event.title}" style="height: 200px; object-fit: cover;">
+        <div class="card-body event-card-body">
+          <span class="badge bg-primary mb-2">${event.category}</span>
+          <h5 class="card-title">${event.title}</h5>
+          <p class="card-text text-muted small">${truncateText(event.description, 80)}</p>
+          <div class="mb-2">
+            <small class="text-muted">
+              <i class="fas fa-calendar me-1"></i>${formattedDate}
+            </small>
+          </div>
+          <div class="mb-2">
+            <small class="text-muted">
+              <i class="fas fa-map-marker-alt me-1"></i>${event.location}
+            </small>
+          </div>
+          <div class="mt-3">
+            <strong class="text-primary">${formattedPrice}</strong>
+          </div>
         </div>
-    `
+        <div class="card-footer bg-white border-0">
+          <div class="d-grid gap-2">
+            <a href="detail.html?id=${event.id}" class="btn btn-outline-primary btn-sm">
+              <i class="fas fa-eye me-1"></i>Lihat Detail
+            </a>
+            <button onclick="editEvent(${event.id})" class="btn btn-warning btn-sm">
+              <i class="fas fa-edit me-1"></i>Edit
+            </button>
+            <button onclick="deleteEvent(${event.id})" class="btn btn-danger btn-sm">
+              <i class="fas fa-trash me-1"></i>Hapus
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
-function formatDate(dateString) {
-  const options = { year: "numeric", month: "long", day: "numeric" }
-  return new Date(dateString).toLocaleDateString("id-ID", options)
-}
-
-function openEditModal(eventId) {
-  const event = StorageManager.getById(eventId)
-
-  document.getElementById("editEventId").value = eventId
-  document.getElementById("editTitle").value = event.title
-  document.getElementById("editDescription").value = event.description
-  document.getElementById("editDate").value = event.date
-  document.getElementById("editLocation").value = event.location
-  document.getElementById("editPrice").value = event.price
-  document.getElementById("editCategory").value = event.category
-
-  editModal.show()
+function editEvent(eventId) {
+  const event = EventStorage.getEventById(eventId);
+  
+  if (!event) {
+    alert('Event tidak ditemukan!');
+    return;
+  }
+  
+  // Fill form with event data
+  document.getElementById('editEventId').value = event.id;
+  document.getElementById('editTitle').value = event.title;
+  document.getElementById('editDescription').value = event.description;
+  document.getElementById('editDate').value = event.date;
+  document.getElementById('editLocation').value = event.location;
+  document.getElementById('editPrice').value = event.price;
+  document.getElementById('editCategory').value = event.category;
+  
+  // Show modal
+  editModal.show();
 }
 
 function handleEditSubmit(e) {
-  e.preventDefault()
-
-  const eventId = Number.parseInt(document.getElementById("editEventId").value)
-  const updatedEvent = {
-    title: document.getElementById("editTitle").value,
-    description: document.getElementById("editDescription").value,
-    date: document.getElementById("editDate").value,
-    location: document.getElementById("editLocation").value,
-    price: Number.parseInt(document.getElementById("editPrice").value),
-    category: document.getElementById("editCategory").value,
+  e.preventDefault();
+  
+  const eventId = parseInt(document.getElementById('editEventId').value);
+  const title = document.getElementById('editTitle').value.trim();
+  const description = document.getElementById('editDescription').value.trim();
+  const date = document.getElementById('editDate').value;
+  const location = document.getElementById('editLocation').value.trim();
+  const price = parseInt(document.getElementById('editPrice').value);
+  const category = document.getElementById('editCategory').value;
+  
+  const updatedData = {
+    title,
+    description,
+    date,
+    location,
+    price,
+    category
+  };
+  
+  const result = EventStorage.updateEvent(eventId, updatedData);
+  
+  if (result) {
+    alert('Event berhasil diupdate!');
+    editModal.hide();
+    loadMyEvents();
+  } else {
+    alert('Gagal mengupdate event!');
   }
-
-  StorageManager.update(eventId, updatedEvent)
-  editModal.hide()
-  displayMyEvents()
-  alert("Event berhasil diperbarui!")
 }
 
 function deleteEvent(eventId) {
-  if (confirm("Apakah Anda yakin ingin menghapus event ini?")) {
-    StorageManager.delete(eventId)
-    StorageManager.unmarkUserEvent(eventId)
-    displayMyEvents()
-    alert("Event berhasil dihapus!")
+  const event = EventStorage.getEventById(eventId);
+  
+  if (!event) {
+    alert('Event tidak ditemukan!');
+    return;
+  }
+  
+  if (confirm(`Yakin ingin menghapus event "${event.title}"?\n\nTindakan ini tidak dapat dibatalkan.`)) {
+    const result = EventStorage.deleteEvent(eventId);
+    
+    if (result) {
+      alert('Event berhasil dihapus!');
+      loadMyEvents();
+    } else {
+      alert('Gagal menghapus event!');
+    }
   }
 }
 
-function removeFavorite(eventId) {
-  StorageManager.removeFavorite(eventId)
-  displayFavorites()
+function formatDate(dateString) {
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString('id-ID', options);
+}
+
+function formatPrice(price) {
+  if (price === 0) return 'Gratis';
+  return 'Rp ' + price.toLocaleString('id-ID');
+}
+
+function truncateText(text, maxLength) {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
 }

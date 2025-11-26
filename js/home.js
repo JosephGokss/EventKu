@@ -1,68 +1,99 @@
-// Home Page Script
-document.addEventListener("DOMContentLoaded", () => {
-  displayLatestEvents()
-})
+// home.js - Logic untuk halaman beranda
+document.addEventListener('DOMContentLoaded', function() {
+  loadLatestEvents();
+});
 
-function displayLatestEvents() {
-  const events = StorageManager.getAll()
-  const latestEvents = events.slice(0, 3)
-  const container = document.getElementById("latestEventsContainer")
-
-  container.innerHTML = latestEvents.map((event) => createEventCard(event)).join("")
+function loadLatestEvents() {
+  const container = document.getElementById('latestEventsContainer');
+  const events = EventStorage.getAllEvents();
+  
+  // Ambil 3 event terbaru berdasarkan tanggal terdekat
+  const sortedEvents = events
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 3);
+  
+  if (sortedEvents.length === 0) {
+    container.innerHTML = `
+      <div class="col-12">
+        <div class="alert alert-info text-center">
+          <i class="fas fa-info-circle me-2"></i>Belum ada event tersedia
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = sortedEvents.map(event => createEventCard(event)).join('');
 }
 
 function createEventCard(event) {
-  const categoryColor = {
-    Workshop: "#6c757d",
-    Seminar: "#0dcaf0",
-    Konferensi: "#dc3545",
-    Meetup: "#198754",
-    Festival: "#ffc107",
-  }
-
-  const isFavorite = StorageManager.isFavorite(event.id)
-  const image = event.image || `/placeholder.svg?height=300&width=400&query=event`
-
+  const formattedDate = formatDate(event.date);
+  const formattedPrice = formatPrice(event.price);
+  
   return `
-        <div class="col-md-6 col-lg-4">
-            <div class="card event-card shadow-sm">
-                <img src="${image}" alt="${event.title}" class="card-img-top" onerror="this.src='/community-event.png'">
-                <div class="card-body event-card-body">
-                    <div class="mb-2">
-                        <span class="badge" style="background-color: ${categoryColor[event.category] || "#0d6efd"}">${event.category}</span>
-                    </div>
-                    <h5 class="card-title">${event.title}</h5>
-                    <p class="card-text small text-muted">
-                        <i class="fas fa-calendar me-2"></i>${formatDate(event.date)}<br>
-                        <i class="fas fa-map-marker-alt me-2"></i>${event.location}
-                    </p>
-                    <p class="card-text fw-bold text-primary">
-                        ${event.price === 0 ? "Gratis" : `Rp ${event.price.toLocaleString("id-ID")}`}
-                    </p>
-                </div>
-                <div class="card-footer bg-white border-top event-card-footer">
-                    <a href="pages/detail.html?id=${event.id}" class="btn btn-primary btn-sm flex-grow-1">
-                        <i class="fas fa-eye me-1"></i>Detail
-                    </a>
-                    <button class="btn btn-outline-danger btn-sm" onclick="toggleFavorite(${event.id})">
-                        <i class="fas fa-heart${isFavorite ? " fa-solid" : ""}"></i>
-                    </button>
-                </div>
-            </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card event-card shadow-sm h-100">
+        <img src="${event.image}" class="card-img-top" alt="${event.title}" style="height: 200px; object-fit: cover;">
+        <div class="card-body event-card-body">
+          <span class="badge bg-primary mb-2">${event.category}</span>
+          <h5 class="card-title">${event.title}</h5>
+          <p class="card-text text-muted small">${truncateText(event.description, 100)}</p>
+          <div class="mb-2">
+            <small class="text-muted">
+              <i class="fas fa-calendar me-1"></i>${formattedDate}
+            </small>
+          </div>
+          <div class="mb-2">
+            <small class="text-muted">
+              <i class="fas fa-map-marker-alt me-1"></i>${event.location}
+            </small>
+          </div>
+          <div class="mt-3">
+            <strong class="text-primary">${formattedPrice}</strong>
+          </div>
         </div>
-    `
+        <div class="card-footer bg-white border-0 event-card-footer">
+          <a href="pages/detail.html?id=${event.id}" class="btn btn-outline-primary btn-sm flex-fill">
+            <i class="fas fa-info-circle me-1"></i>Detail
+          </a>
+          <button onclick="quickRegister(${event.id})" class="btn btn-primary btn-sm flex-fill">
+            <i class="fas fa-check-circle me-1"></i>Daftar
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function quickRegister(eventId) {
+  const event = EventStorage.getEventById(eventId);
+  if (!event) {
+    alert('Event tidak ditemukan!');
+    return;
+  }
+  
+  if (EventStorage.isRegistered(eventId)) {
+    alert('Anda sudah terdaftar untuk event ini!');
+    return;
+  }
+  
+  if (confirm(`Daftar untuk event "${event.title}"?`)) {
+    EventStorage.registerForEvent(eventId);
+    alert('Berhasil mendaftar! Lihat dashboard untuk detail lebih lanjut.');
+  }
 }
 
 function formatDate(dateString) {
-  const options = { year: "numeric", month: "long", day: "numeric" }
-  return new Date(dateString).toLocaleDateString("id-ID", options)
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString('id-ID', options);
 }
 
-function toggleFavorite(eventId) {
-  if (StorageManager.isFavorite(eventId)) {
-    StorageManager.removeFavorite(eventId)
-  } else {
-    StorageManager.addFavorite(eventId)
-  }
-  displayLatestEvents()
+function formatPrice(price) {
+  if (price === 0) return 'Gratis';
+  return 'Rp ' + price.toLocaleString('id-ID');
+}
+
+function truncateText(text, maxLength) {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
 }

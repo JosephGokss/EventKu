@@ -29,6 +29,7 @@ function loadLatestEvents() {
 function createEventCard(event) {
   const formattedDate = formatDate(event.date);
   const formattedPrice = formatPrice(event.price);
+  const isRegistered = EventStorage.isRegistered(event.id);
   
   return `
     <div class="col-md-6 col-lg-4">
@@ -36,6 +37,7 @@ function createEventCard(event) {
         <img src="${event.image}" class="card-img-top" alt="${event.title}" style="height: 200px; object-fit: cover;">
         <div class="card-body event-card-body">
           <span class="badge bg-primary mb-2">${event.category}</span>
+          ${isRegistered ? '<span class="badge bg-success mb-2 ms-1">Terdaftar</span>' : ''}
           <h5 class="card-title">${event.title}</h5>
           <p class="card-text text-muted small">${truncateText(event.description, 100)}</p>
           <div class="mb-2">
@@ -56,8 +58,12 @@ function createEventCard(event) {
           <a href="pages/detail.html?id=${event.id}" class="btn btn-outline-primary btn-sm flex-fill">
             <i class="fas fa-info-circle me-1"></i>Detail
           </a>
-          <button onclick="quickRegister(${event.id})" class="btn btn-primary btn-sm flex-fill">
-            <i class="fas fa-check-circle me-1"></i>Daftar
+          <button 
+            onclick="quickRegister(${event.id}, this)" 
+            class="btn ${isRegistered ? 'btn-success' : 'btn-primary'} btn-sm flex-fill"
+            ${isRegistered ? 'disabled' : ''}
+            id="quickRegisterBtn-${event.id}">
+            <i class="fas fa-check-circle me-1"></i>${isRegistered ? 'Terdaftar' : 'Daftar'}
           </button>
         </div>
       </div>
@@ -65,22 +71,83 @@ function createEventCard(event) {
   `;
 }
 
-function quickRegister(eventId) {
+function quickRegister(eventId, buttonElement) {
   const event = EventStorage.getEventById(eventId);
   if (!event) {
-    alert('Event tidak ditemukan!');
+    showNotification('Event tidak ditemukan!', 'error');
     return;
   }
   
   if (EventStorage.isRegistered(eventId)) {
-    alert('Anda sudah terdaftar untuk event ini!');
+    showNotification('Anda sudah terdaftar untuk event ini!', 'info');
     return;
   }
   
-  if (confirm(`Daftar untuk event "${event.title}"?`)) {
+  // Tambahkan loading state
+  buttonElement.disabled = true;
+  buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memproses...';
+  
+  // Simulasi proses pendaftaran
+  setTimeout(() => {
     EventStorage.registerForEvent(eventId);
-    alert('Berhasil mendaftar! Lihat dashboard untuk detail lebih lanjut.');
+    
+    // Update tombol jadi hijau dan disabled
+    buttonElement.classList.remove('btn-primary');
+    buttonElement.classList.add('btn-success');
+    buttonElement.innerHTML = '<i class="fas fa-check-circle me-1"></i>Terdaftar';
+    
+    // Tampilkan notifikasi sukses
+    showNotification(
+      `Berhasil mendaftar untuk event "${event.title}"!`,
+      'success'
+    );
+    
+    // Reload events untuk update badge
+    loadLatestEvents();
+  }, 500);
+}
+
+function showNotification(message, type = 'success') {
+  // Hapus notifikasi lama jika ada
+  const existingNotif = document.querySelector('.custom-notification');
+  if (existingNotif) {
+    existingNotif.remove();
   }
+  
+  // Buat elemen notifikasi
+  const notification = document.createElement('div');
+  notification.className = `custom-notification ${type}`;
+  
+  // Icon berdasarkan type
+  let icon = '';
+  if (type === 'success') {
+    icon = '<i class="fas fa-check-circle"></i>';
+  } else if (type === 'error') {
+    icon = '<i class="fas fa-exclamation-circle"></i>';
+  } else if (type === 'info') {
+    icon = '<i class="fas fa-info-circle"></i>';
+  }
+  
+  notification.innerHTML = `
+    ${icon}
+    <span>${message}</span>
+  `;
+  
+  // Tambahkan ke body
+  document.body.appendChild(notification);
+  
+  // Trigger animasi masuk
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+  
+  // Hapus setelah 3 detik
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, 3000);
 }
 
 function formatDate(dateString) {

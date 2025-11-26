@@ -390,6 +390,113 @@ h6 {
   border: none;
 }
 
+/* Custom Notification Styles */
+.custom-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 9999;
+  transform: translateX(400px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 300px;
+  max-width: 500px;
+  border-left: 4px solid;
+}
+
+.custom-notification.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.custom-notification i {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.custom-notification span {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #212529;
+}
+
+/* Success Notification */
+.custom-notification.success {
+  border-left-color: #198754;
+  background: linear-gradient(to right, rgba(25, 135, 84, 0.1), white);
+}
+
+.custom-notification.success i {
+  color: #198754;
+}
+
+/* Error Notification */
+.custom-notification.error {
+  border-left-color: #dc3545;
+  background: linear-gradient(to right, rgba(220, 53, 69, 0.1), white);
+}
+
+.custom-notification.error i {
+  color: #dc3545;
+}
+
+/* Info Notification */
+.custom-notification.info {
+  border-left-color: #0dcaf0;
+  background: linear-gradient(to right, rgba(13, 202, 240, 0.1), white);
+}
+
+.custom-notification.info i {
+  color: #0dcaf0;
+}
+
+/* Animation untuk tombol loading */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner-border {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: text-bottom;
+  border: 0.15em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+.spinner-border-sm {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-width: 0.125em;
+}
+
+/* Responsive Notification */
+@media (max-width: 576px) {
+  .custom-notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: auto;
+    max-width: none;
+    transform: translateY(-100px);
+  }
+  
+  .custom-notification.show {
+    transform: translateY(0);
+  }
+}
+
 /* Footer */
 footer {
   margin-top: auto;

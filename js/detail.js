@@ -4,8 +4,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const eventId = urlParams.get('id');
   
   if (!eventId) {
-    alert('Event tidak ditemukan!');
-    window.location.href = 'event-list.html';
+    showNotification('Event tidak ditemukan!', 'error');
+    setTimeout(() => {
+      window.location.href = 'event-list.html';
+    }, 1500);
     return;
   }
   
@@ -17,8 +19,10 @@ function loadEventDetail(eventId) {
   const event = EventStorage.getEventById(parseInt(eventId));
   
   if (!event) {
-    alert('Event tidak ditemukan!');
-    window.location.href = 'event-list.html';
+    showNotification('Event tidak ditemukan!', 'error');
+    setTimeout(() => {
+      window.location.href = 'event-list.html';
+    }, 1500);
     return;
   }
   
@@ -34,65 +38,92 @@ function loadEventDetail(eventId) {
   document.getElementById('eventPrice').textContent = formatPrice(event.price);
   
   // Update page title
-  document.title = `${event.title} - EventHub`;
+  document.title = `${event.title} - EventKu`;
 }
 
 function setupButtons(eventId) {
   const registerBtn = document.getElementById('registerBtn');
-  const favoriteBtn = document.getElementById('favoriteBtn');
-  
   const eventIdInt = parseInt(eventId);
   
   // Check if already registered
   if (EventStorage.isRegistered(eventIdInt)) {
-    registerBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Sudah Terdaftar';
-    registerBtn.disabled = true;
-    registerBtn.classList.remove('btn-primary');
-    registerBtn.classList.add('btn-success');
+    setRegisteredState(registerBtn);
   }
-  
-  // Check if already favorited
-  updateFavoriteButton(eventIdInt);
   
   // Register button handler
   registerBtn.addEventListener('click', function() {
     if (!EventStorage.isRegistered(eventIdInt)) {
       const event = EventStorage.getEventById(eventIdInt);
-      if (confirm(`Daftar untuk event "${event.title}"?`)) {
+      
+      // Tambahkan loading state
+      registerBtn.disabled = true;
+      registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
+      
+      // Simulasi proses (bisa dihapus jika tidak perlu delay)
+      setTimeout(() => {
         EventStorage.registerForEvent(eventIdInt);
-        alert('Berhasil mendaftar! Lihat dashboard untuk detail lebih lanjut.');
-        this.innerHTML = '<i class="fas fa-check-circle me-2"></i>Sudah Terdaftar';
-        this.disabled = true;
-        this.classList.remove('btn-primary');
-        this.classList.add('btn-success');
-      }
+        
+        // Ubah tampilan tombol
+        setRegisteredState(registerBtn);
+        
+        // Tampilkan notifikasi sukses
+        showNotification(
+          `Berhasil mendaftar untuk event "${event.title}"!`, 
+          'success'
+        );
+      }, 500);
     }
-  });
-  
-  // Favorite button handler
-  favoriteBtn.addEventListener('click', function() {
-    if (EventStorage.isFavorite(eventIdInt)) {
-      EventStorage.removeFromFavorites(eventIdInt);
-      alert('Dihapus dari favorit');
-    } else {
-      EventStorage.addToFavorites(eventIdInt);
-      alert('Ditambahkan ke favorit');
-    }
-    updateFavoriteButton(eventIdInt);
   });
 }
 
-function updateFavoriteButton(eventId) {
-  const favoriteBtn = document.getElementById('favoriteBtn');
-  if (EventStorage.isFavorite(eventId)) {
-    favoriteBtn.innerHTML = '<i class="fas fa-heart me-2"></i>Hapus dari Favorit';
-    favoriteBtn.classList.remove('btn-outline-danger');
-    favoriteBtn.classList.add('btn-danger');
-  } else {
-    favoriteBtn.innerHTML = '<i class="fas fa-heart me-2"></i>Tambah ke Favorit';
-    favoriteBtn.classList.remove('btn-danger');
-    favoriteBtn.classList.add('btn-outline-danger');
+function setRegisteredState(button) {
+  button.innerHTML = '<i class="fas fa-check-circle me-2"></i>Sudah Terdaftar';
+  button.disabled = true;
+  button.classList.remove('btn-primary');
+  button.classList.add('btn-success');
+}
+
+function showNotification(message, type = 'success') {
+  // Hapus notifikasi lama jika ada
+  const existingNotif = document.querySelector('.custom-notification');
+  if (existingNotif) {
+    existingNotif.remove();
   }
+  
+  // Buat elemen notifikasi
+  const notification = document.createElement('div');
+  notification.className = `custom-notification ${type}`;
+  
+  // Icon berdasarkan type
+  let icon = '';
+  if (type === 'success') {
+    icon = '<i class="fas fa-check-circle"></i>';
+  } else if (type === 'error') {
+    icon = '<i class="fas fa-exclamation-circle"></i>';
+  } else if (type === 'info') {
+    icon = '<i class="fas fa-info-circle"></i>';
+  }
+  
+  notification.innerHTML = `
+    ${icon}
+    <span>${message}</span>
+  `;
+  
+  // Tambahkan ke body
+  document.body.appendChild(notification);
+  
+  // Trigger animasi masuk
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+  
+  // Hapus setelah 3 detik
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, 3000);
 }
 
 function formatDate(dateString) {

@@ -104,7 +104,11 @@ function createEventCard(event) {
           <a href="detail.html?id=${event.id}" class="btn btn-outline-primary btn-sm flex-fill">
             <i class="fas fa-info-circle me-1"></i>Detail
           </a>
-          <button onclick="registerEvent(${event.id})" class="btn btn-primary btn-sm flex-fill" ${isRegistered ? 'disabled' : ''}>
+          <button 
+            onclick="registerEvent(${event.id}, this)" 
+            class="btn ${isRegistered ? 'btn-success' : 'btn-primary'} btn-sm flex-fill" 
+            ${isRegistered ? 'disabled' : ''}
+            id="registerBtn-${event.id}">
             <i class="fas fa-check-circle me-1"></i>${isRegistered ? 'Terdaftar' : 'Daftar'}
           </button>
         </div>
@@ -116,23 +120,86 @@ function createEventCard(event) {
 function toggleFavorite(eventId) {
   if (EventStorage.isFavorite(eventId)) {
     EventStorage.removeFromFavorites(eventId);
+    showNotification('Dihapus dari favorit', 'info');
   } else {
     EventStorage.addToFavorites(eventId);
+    showNotification('Ditambahkan ke favorit!', 'success');
   }
   loadEvents();
 }
 
-function registerEvent(eventId) {
+function registerEvent(eventId, buttonElement) {
   if (EventStorage.isRegistered(eventId)) {
     return;
   }
   
   const event = EventStorage.getEventById(eventId);
-  if (confirm(`Daftar untuk event "${event.title}"?`)) {
+  
+  // Tambahkan loading state
+  buttonElement.disabled = true;
+  buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memproses...';
+  
+  // Simulasi proses pendaftaran
+  setTimeout(() => {
     EventStorage.registerForEvent(eventId);
-    alert('Berhasil mendaftar!');
+    
+    // Update tombol jadi hijau dan disabled
+    buttonElement.classList.remove('btn-primary');
+    buttonElement.classList.add('btn-success');
+    buttonElement.innerHTML = '<i class="fas fa-check-circle me-1"></i>Terdaftar';
+    
+    // Tampilkan notifikasi sukses
+    showNotification(
+      `Berhasil mendaftar untuk event "${event.title}"!`,
+      'success'
+    );
+    
+    // Reload events untuk update badge
     loadEvents();
+  }, 500);
+}
+
+function showNotification(message, type = 'success') {
+  // Hapus notifikasi lama jika ada
+  const existingNotif = document.querySelector('.custom-notification');
+  if (existingNotif) {
+    existingNotif.remove();
   }
+  
+  // Buat elemen notifikasi
+  const notification = document.createElement('div');
+  notification.className = `custom-notification ${type}`;
+  
+  // Icon berdasarkan type
+  let icon = '';
+  if (type === 'success') {
+    icon = '<i class="fas fa-check-circle"></i>';
+  } else if (type === 'error') {
+    icon = '<i class="fas fa-exclamation-circle"></i>';
+  } else if (type === 'info') {
+    icon = '<i class="fas fa-info-circle"></i>';
+  }
+  
+  notification.innerHTML = `
+    ${icon}
+    <span>${message}</span>
+  `;
+  
+  // Tambahkan ke body
+  document.body.appendChild(notification);
+  
+  // Trigger animasi masuk
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+  
+  // Hapus setelah 3 detik
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, 3000);
 }
 
 function formatDate(dateString) {
